@@ -293,3 +293,165 @@ body,
 .btn:hover {
   border-color: rgba(124, 199, 255, 0.6);
 }
+
+/* --- Movie Dock (top-right) --- */
+.movieDock {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(10, 12, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.movieTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.movieTitle {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+.moviePlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(124, 199, 255, 0.35);
+  background: rgba(40, 60, 120, 0.18);
+}
+
+.moviePlay:hover {
+  border-color: rgba(124, 199, 255, 0.6);
+}
+
+.movieIcon {
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid rgba(255, 255, 255, 0.92);
+}
+
+.moviePlay.playing .movieIcon {
+  width: 10px;
+  height: 14px;
+  border: none;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.92) 0 3px,
+    transparent 3px 7px,
+    rgba(255, 255, 255, 0.92) 7px 10px
+  );
+}
+
+.movieBtnText {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.movieRow {
+  margin-top: 12px;
+}
+.movieLabel {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.movieSlider {
+  width: 100%;
+  margin-top: 8px;
+}
+.movieScale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Film reel dots */
+.movieReel {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.reelDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 199, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+}
+
+.reelDot:hover {
+  transform: scale(1.15);
+  border-color: rgba(124, 199, 255, 0.55);
+}
+
+.reelDot.active {
+  background: rgba(124, 199, 255, 0.85);
+  border-color: rgba(124, 199, 255, 0.85);
+  box-shadow: 0 0 18px rgba(124, 199, 255, 0.35);
+}
+
+.movieFooter {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* --- Unique: subtle “hyperdrive film grain” overlay when playing --- */
+.scene.cinema::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: screen;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(124, 199, 255, 0) 0px,
+    rgba(124, 199, 255, 0) 22px,
+    rgba(124, 199, 255, 0.35) 23px,
+    rgba(124, 199, 255, 0) 24px
+  );
+  animation: warpLines 1.2s linear infinite;
+}
+
+@keyframes warpLines {
+  from {
+    transform: translateX(-40px);
+  }
+  to {
+    transform: translateX(40px);
+  }
+}
+
+/* Responsive: on small screens, dock becomes top-center */
+@media (max-width: 640px) {
+  .movieDock {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
