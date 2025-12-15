@@ -1,6 +1,13 @@
+import { useState } from "react";
 import type { StoryNode } from "../data/story";
 
 export default function StoryPanel({ node }: { node: StoryNode }) {
+  const [showImage, setShowImage] = useState(false);
+
+  // Reset image visibility when node changes
+  // (simple approach: key the component where it’s used, or do an effect)
+  // If you want it auto-reset, render <StoryPanel key={node.id} node={node} /> in parent.
+
   return (
     <section className="panel" aria-label="Selected story details">
       <div className="panelTop">
@@ -12,14 +19,24 @@ export default function StoryPanel({ node }: { node: StoryNode }) {
       </div>
 
       {node.image?.url && (
-        <div className="panelImageWrap">
-          <img
-            className="panelImage"
-            src={node.image.url}
-            alt={node.image.alt}
-            loading="lazy"
-          />
-          <div className="panelCredit">{node.image.credit}</div>
+        <div className="panelSection">
+          {!showImage ? (
+            <button className="btn" onClick={() => setShowImage(true)}>
+              Show photo (loads on demand)
+            </button>
+          ) : (
+            <div className="panelImageWrap">
+              <img
+                className="panelImage"
+                src={node.image.url}
+                alt={node.image.alt}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
+              />
+              <div className="panelCredit">{node.image.credit}</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -38,7 +55,6 @@ export default function StoryPanel({ node }: { node: StoryNode }) {
         <ul className="panelSources">
           {node.sources.map((s) => (
             <li key={s.url}>
-              {/* URLs are fine inside code/projects; on-page they’re clickable */}
               <a href={s.url} target="_blank" rel="noreferrer">
                 {s.label}
               </a>

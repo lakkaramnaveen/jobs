@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { StoryNode } from "../data/story";
 
 type Props = {
   story: StoryNode[];
   selectedId: string;
   onSelect: (id: string) => void;
+  query: string;
 };
 
-export default function HUD({ story, selectedId, onSelect }: Props) {
-  const [query, setQuery] = useState("");
-
+export default function HUD({ story, selectedId, onSelect, query }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return story;
@@ -21,31 +20,11 @@ export default function HUD({ story, selectedId, onSelect }: Props) {
     );
   }, [query, story]);
 
-  // Space toggles “Story Mode” (simple: jump next each press)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      const idx = story.findIndex((s) => s.id === selectedId);
-      const next = story[(idx + 1) % story.length];
-      onSelect(next.id);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onSelect, selectedId, story]);
-
   return (
     <aside className="hud" aria-label="Mission Control timeline navigation">
       <div className="hudHeader">
         <div className="hudTitle">Mission Control</div>
         <div className="hudSub">Navigate Steve Jobs’ life as a star map</div>
-        <input
-          className="hudSearch"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search year, title…"
-          aria-label="Search timeline"
-        />
       </div>
 
       <div className="hudList" role="list">

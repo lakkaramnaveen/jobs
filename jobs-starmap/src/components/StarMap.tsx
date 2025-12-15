@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import type { StoryNode } from "../data/story";
-import BackgroundStars from "./background/BackgroundStars";
+import BackgroundStarsPoints from "./background/BackgroundStarsPoints";
 import StarNode from "./StarNode";
 
 // If TS complains about OrbitControls types, install once:
@@ -205,7 +205,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
         zoomSpeed={0.8}
       />
 
-      <BackgroundStars count={7000} radius={130} />
+      <BackgroundStarsPoints count={4500} radius={130} />
 
       {/* Constellation curve (base line) */}
       <line geometry={constellationGeometry}>
