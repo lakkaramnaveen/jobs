@@ -14,6 +14,7 @@ type Props = {
   story: StoryNode[];
   selectedId: string;
   onSelect: (id: string) => void;
+  onUserControlStart?: () => void; // NEW
 };
 
 // ---------- Layout helpers (less rigid) ----------
@@ -97,6 +98,22 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     const base = story.map((n) => positions[n.id]).filter(Boolean);
     return new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
   }, [story, positions]);
+  
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const handleStart = () => {
+      onUserControlStart?.();
+    };
+
+    // OrbitControls fires "start" on drag and (typically) on wheel zoom
+    controls.addEventListener("start", handleStart);
+
+    return () => {
+      controls.removeEventListener("start", handleStart);
+    };
+  }, [onUserControlStart]);
 
   // When a new star is selected, “warp” the camera directly to it
   useEffect(() => {
@@ -272,3 +289,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     </group>
   );
 }
+function onUserControlStart() {
+  throw new Error("Function not implemented.");
+}
+
