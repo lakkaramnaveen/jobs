@@ -7,26 +7,28 @@ import HUD from "./HUD";
 import SearchDock from "./SearchDock";
 import MovieDock from "./MovieDock";
 
+// ...imports
+
 export default function SpaceScene() {
   const [selectedId, setSelectedId] = useState<string>("birth");
   const [query, setQuery] = useState<string>("");
 
-  // Movie Mode state
   const [playing, setPlaying] = useState(false);
-  const [speedMs, setSpeedMs] = useState(1600); // default: 1.6s per star
-  const [loop] = useState(true); // keep simple; can expose as toggle later
+  const [speedMs, setSpeedMs] = useState(1600);
+  const loop = true;
 
   const selected = useMemo(
     () => STORY.find((s) => s.id === selectedId) ?? STORY[0],
     [selectedId]
   );
 
-  const onSelect = useCallback((id: string) => {
-    setSelectedId(id); // clicking a star jumps instantly (camera warps via StarMap logic)
+  // Manual navigation always pauses
+  const selectManual = useCallback((id: string) => {
+    setPlaying(false);
+    setSelectedId(id);
   }, []);
 
-  // Slideshow: advances to next star after speedMs.
-  // Uses setTimeout + cleanup to be reliable and respond to speed changes immediately. :contentReference[oaicite:2]{index=2}
+  // Slideshow keeps running only for AUTO-advance
   useEffect(() => {
     if (!playing) return;
 
@@ -42,7 +44,7 @@ export default function SpaceScene() {
         setPlaying(false);
         return;
       }
-      setSelectedId(STORY[nextIdx].id);
+      setSelectedId(STORY[nextIdx].id); // IMPORTANT: do not call selectManual here
     }, speedMs);
 
     return () => window.clearTimeout(t);
@@ -51,7 +53,7 @@ export default function SpaceScene() {
   return (
     <div className={`scene ${playing ? "cinema" : ""}`}>
       <Canvas
-        dpr={1} // performance: keep predictable on laptops/mobiles
+        dpr={1}
         gl={{
           antialias: false,
           alpha: false,
@@ -60,19 +62,21 @@ export default function SpaceScene() {
         camera={{ position: [0, 0, 14], fov: 55, near: 0.1, far: 250 }}
       >
         <color attach="background" args={["#000006"]} />
-        <StarMap story={STORY} selectedId={selectedId} onSelect={onSelect} />
+        <StarMap
+          story={STORY}
+          selectedId={selectedId}
+          onSelect={selectManual} // star click pauses
+          onUserControlStart={() => setPlaying(false)} // drag/zoom pauses
+        />
       </Canvas>
 
       <HUD
         story={STORY}
         selectedId={selectedId}
-        onSelect={onSelect}
+        onSelect={selectManual}
         query={query}
       />
-
-      {/* Key trick: key resets internal panel UI between slides (e.g., image reveal state). */}
       <StoryPanel key={selected.id} node={selected as StoryNode} />
-
       <SearchDock query={query} setQuery={setQuery} />
 
       <MovieDock
@@ -82,7 +86,7 @@ export default function SpaceScene() {
         setPlaying={setPlaying}
         speedMs={speedMs}
         setSpeedMs={setSpeedMs}
-        onSelect={onSelect}
+        onSelect={selectManual} // reel-dot click pauses
       />
     </div>
   );

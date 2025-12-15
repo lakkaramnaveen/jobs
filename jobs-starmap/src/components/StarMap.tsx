@@ -98,7 +98,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     const base = story.map((n) => positions[n.id]).filter(Boolean);
     return new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
   }, [story, positions]);
-  
+
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
@@ -292,4 +292,3 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
 function onUserControlStart() {
   throw new Error("Function not implemented.");
 }
-

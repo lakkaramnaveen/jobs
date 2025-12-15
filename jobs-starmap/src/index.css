@@ -32,63 +32,45 @@ body,
   overflow: hidden;
 }
 
-.footer {
-  position: absolute;
-  left: 18px;
-  bottom: 14px;
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--muted);
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  backdrop-filter: blur(8px);
-}
-
+/* --- HUD (left) --- */
 .hud {
   position: absolute;
   left: 16px;
   top: 16px;
   width: 360px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 160px);
   background: var(--panel);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   overflow: hidden;
   backdrop-filter: blur(10px);
+  z-index: 10;
 }
 
 .hudHeader {
   padding: 14px 14px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+
 .hudTitle {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 14px;
   letter-spacing: 0.4px;
 }
+
 .hudSub {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
 }
-.hudSearch {
-  margin-top: 10px;
-  width: 100%;
-  padding: 10px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.25);
-  color: var(--text);
-  outline: none;
-}
 
 .hudList {
   padding: 8px;
   overflow: auto;
-  max-height: calc(100vh - 220px);
+  max-height: calc(100vh - 240px);
 }
+
 .hudItem {
   width: 100%;
   display: grid;
@@ -103,24 +85,29 @@ body,
   text-align: left;
   margin-bottom: 8px;
 }
+
 .hudItem:hover {
   border-color: rgba(124, 199, 255, 0.35);
 }
+
 .hudItem.active {
   border-color: rgba(124, 199, 255, 0.6);
   background: rgba(40, 60, 120, 0.18);
 }
+
 .hudYear {
   font-weight: 800;
   color: rgba(124, 199, 255, 0.95);
   font-size: 12px;
   align-self: start;
 }
+
 .hudItemTitle {
   display: block;
   font-weight: 700;
   font-size: 13px;
 }
+
 .hudItemSub {
   display: block;
   margin-top: 3px;
@@ -129,19 +116,21 @@ body,
   line-height: 1.25;
 }
 
+/* --- Story Panel (right) --- */
 .panel {
   position: absolute;
   right: 16px;
   top: 16px;
   width: 420px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 60px);
+  max-height: calc(100vh - 180px);
   overflow: auto;
   background: var(--panel2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 14px 14px 18px;
   backdrop-filter: blur(12px);
+  z-index: 12;
 }
 
 .panelKicker {
@@ -149,10 +138,12 @@ body,
   font-weight: 800;
   font-size: 12px;
 }
+
 .panelTitle {
   margin: 6px 0 0;
   font-size: 18px;
 }
+
 .panelSubtitle {
   margin-top: 6px;
   color: var(--muted);
@@ -162,11 +153,13 @@ body,
 .panelImageWrap {
   margin-top: 12px;
 }
+
 .panelImage {
   width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .panelCredit {
   margin-top: 6px;
   font-size: 11px;
@@ -178,6 +171,7 @@ body,
   font-size: 13px;
   letter-spacing: 0.2px;
 }
+
 .panelSection p {
   margin: 0;
   color: rgba(255, 255, 255, 0.86);
@@ -189,14 +183,17 @@ body,
   margin: 8px 0 0;
   padding-left: 18px;
 }
+
 .panelSources a {
   color: rgba(124, 199, 255, 0.95);
   text-decoration: none;
 }
+
 .panelSources a:hover {
   text-decoration: underline;
 }
 
+/* --- Star label --- */
 .starLabel {
   padding: 6px 8px;
   border-radius: 10px;
@@ -207,16 +204,9 @@ body,
   white-space: nowrap;
   user-select: none;
 }
+
 .starLabel.selected {
   border-color: rgba(124, 199, 255, 0.65);
-}
-
-@media (max-width: 980px) {
-  .panel {
-    top: auto;
-    bottom: 16px;
-    max-height: 44vh;
-  }
 }
 
 /* --- Bottom-center search dock --- */
@@ -231,6 +221,7 @@ body,
   background: rgba(10, 12, 22, 0.74);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
+  z-index: 15;
 }
 
 .searchDockInput {
@@ -249,39 +240,7 @@ body,
   color: rgba(255, 255, 255, 0.62);
 }
 
-/* Give the bottom dock room (so StoryPanel doesn't overlap badly) */
-.panel {
-  max-height: calc(100vh - 140px);
-}
-
-/* --- Responsive layout tweaks --- */
-@media (max-width: 980px) {
-  .hud {
-    width: min(380px, calc(100vw - 32px));
-  }
-  .panel {
-    top: auto;
-    bottom: 92px; /* sit above search dock */
-    width: min(520px, calc(100vw - 32px));
-    max-height: 42vh;
-  }
-}
-
-@media (max-width: 640px) {
-  .hud {
-    left: 12px;
-    top: 12px;
-    width: calc(100vw - 24px);
-    max-height: 34vh;
-  }
-  .panel {
-    right: 12px;
-    left: 12px;
-    width: calc(100vw - 24px);
-    bottom: 92px;
-  }
-}
-
+/* --- Buttons --- */
 .btn {
   padding: 10px 12px;
   border-radius: 12px;
@@ -290,15 +249,16 @@ body,
   color: rgba(255, 255, 255, 0.92);
   cursor: pointer;
 }
+
 .btn:hover {
   border-color: rgba(124, 199, 255, 0.6);
 }
 
-/* --- Movie Dock (top-right) --- */
+/* --- Movie Dock (bottom-right) --- */
 .movieDock {
   position: absolute;
-  top: 16px;
   right: 16px;
+  bottom: 18px;
   width: 320px;
   max-width: calc(100vw - 32px);
   padding: 12px;
@@ -306,6 +266,7 @@ body,
   background: rgba(10, 12, 22, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
+  z-index: 16;
 }
 
 .movieTop {
@@ -365,15 +326,18 @@ body,
 .movieRow {
   margin-top: 12px;
 }
+
 .movieLabel {
   display: block;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
 }
+
 .movieSlider {
   width: 100%;
   margin-top: 8px;
 }
+
 .movieScale {
   display: flex;
   justify-content: space-between;
@@ -420,7 +384,7 @@ body,
   color: rgba(255, 255, 255, 0.65);
 }
 
-/* --- Unique: subtle “hyperdrive film grain” overlay when playing --- */
+/* --- Unique “hyperdrive” overlay when playing --- */
 .scene.cinema::before {
   content: "";
   position: absolute;
@@ -447,35 +411,43 @@ body,
   }
 }
 
-/* Responsive: on small screens, dock becomes top-center */
-@media (max-width: 640px) {
-  .movieDock {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
+/* --- Responsive layout --- */
+@media (max-width: 980px) {
+  .hud {
+    width: min(380px, calc(100vw - 32px));
+  }
+  .panel {
+    width: min(520px, calc(100vw - 32px));
   }
 }
 
-.movieDock {
-  position: absolute;
-  right: 16px;
-  bottom: 18px; /* bottom-right */
-  top: auto; /* ensure not top */
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(10, 12, 22, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  z-index: 20;
+/* Prevent MovieDock overlapping search dock on mid-width screens */
+@media (max-width: 1100px) {
+  .movieDock {
+    bottom: 110px;
+  } /* lift above searchDock */
 }
 
-/* On small screens: keep it bottom-right, but lift it above the bottom-center search dock */
 @media (max-width: 640px) {
-  .movieDock {
-    width: min(320px, calc(100vw - 24px));
+  .hud {
+    left: 12px;
+    top: 12px;
+    width: calc(100vw - 24px);
+    max-height: 34vh;
+  }
+
+  .panel {
     right: 12px;
-    bottom: 110px; /* above search dock */
+    left: 12px;
+    width: calc(100vw - 24px);
+    top: auto;
+    bottom: 92px; /* above searchDock */
+    max-height: 44vh;
+  }
+
+  .movieDock {
+    right: 12px;
+    bottom: 110px; /* above searchDock */
+    width: min(320px, calc(100vw - 24px));
   }
 }
