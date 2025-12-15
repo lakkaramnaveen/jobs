@@ -1,3 +1,6 @@
+/* ==========================================================================
+   Design Tokens
+   ========================================================================== */
 :root {
   --bg: #000006;
   --panel: rgba(10, 12, 22, 0.78);
@@ -5,8 +8,23 @@
   --text: rgba(255, 255, 255, 0.92);
   --muted: rgba(255, 255, 255, 0.65);
   --line: rgba(124, 199, 255, 0.22);
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+
+  --pad-sm: 8px;
+  --pad-md: 12px;
+  --pad-lg: 14px;
+
+  --border-soft: rgba(255, 255, 255, 0.1);
+  --border-soft-2: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(10px);
 }
 
+/* ==========================================================================
+   Base
+   ========================================================================== */
 * {
   box-sizing: border-box;
 }
@@ -32,7 +50,9 @@ body,
   overflow: hidden;
 }
 
-/* --- HUD (left) --- */
+/* ==========================================================================
+   HUD (left)
+   ========================================================================== */
 .hud {
   position: absolute;
   left: 16px;
@@ -41,16 +61,19 @@ body,
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 160px);
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-blur);
   z-index: 10;
+
+  transition: transform 220ms ease, opacity 220ms ease;
+  will-change: transform, opacity;
 }
 
 .hudHeader {
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: var(--pad-lg) var(--pad-lg) 10px;
+  border-bottom: 1px solid var(--border-soft-2);
 }
 
 .hudTitle {
@@ -66,7 +89,7 @@ body,
 }
 
 .hudList {
-  padding: 8px;
+  padding: var(--pad-sm);
   overflow: auto;
   max-height: calc(100vh - 240px);
 }
@@ -77,8 +100,8 @@ body,
   grid-template-columns: 64px 1fr;
   gap: 10px;
   padding: 10px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border: 1px solid var(--border-soft-2);
+  border-radius: var(--radius-md);
   background: rgba(0, 0, 0, 0.18);
   color: var(--text);
   cursor: pointer;
@@ -116,7 +139,16 @@ body,
   line-height: 1.25;
 }
 
-/* --- Story Panel (right) --- */
+/* Off-canvas behavior (used by mobile hamburger) */
+.hud.isClosed {
+  transform: translateX(calc(-100% - 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Story Panel (right)
+   ========================================================================== */
 .panel {
   position: absolute;
   right: 16px;
@@ -126,11 +158,21 @@ body,
   max-height: calc(100vh - 180px);
   overflow: auto;
   background: var(--panel2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 14px 14px 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--pad-lg) var(--pad-lg) 18px;
   backdrop-filter: blur(12px);
   z-index: 12;
+
+  transition: transform 220ms ease, opacity 220ms ease;
+  will-change: transform, opacity;
+}
+
+/* Off-canvas behavior (used by mobile info button) */
+.panel.isClosed {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
 }
 
 .panelKicker {
@@ -157,7 +199,7 @@ body,
 .panelImage {
   width: 100%;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-soft);
 }
 
 .panelCredit {
@@ -193,10 +235,12 @@ body,
   text-decoration: underline;
 }
 
-/* --- Star label --- */
+/* ==========================================================================
+   Star Label
+   ========================================================================== */
 .starLabel {
   padding: 6px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(124, 199, 255, 0.25);
   color: rgba(255, 255, 255, 0.92);
@@ -209,26 +253,28 @@ body,
   border-color: rgba(124, 199, 255, 0.65);
 }
 
-/* --- Bottom-center search dock --- */
+/* ==========================================================================
+   Search Dock (bottom-center)
+   ========================================================================== */
 .searchDock {
   position: absolute;
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
   width: min(620px, calc(100vw - 32px));
-  padding: 12px;
-  border-radius: 16px;
+  padding: var(--pad-md);
+  border-radius: var(--radius-lg);
   background: rgba(10, 12, 22, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-soft);
+  backdrop-filter: var(--glass-blur);
   z-index: 15;
 }
 
 .searchDockInput {
   width: 100%;
   padding: 12px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
   background: rgba(0, 0, 0, 0.25);
   color: rgba(255, 255, 255, 0.92);
   outline: none;
@@ -240,10 +286,12 @@ body,
   color: rgba(255, 255, 255, 0.62);
 }
 
-/* --- Buttons --- */
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
 .btn {
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid rgba(124, 199, 255, 0.35);
   background: rgba(40, 60, 120, 0.18);
   color: rgba(255, 255, 255, 0.92);
@@ -254,18 +302,20 @@ body,
   border-color: rgba(124, 199, 255, 0.6);
 }
 
-/* --- Movie Dock (bottom-right) --- */
+/* ==========================================================================
+   Movie Dock (bottom-right)
+   ========================================================================== */
 .movieDock {
   position: absolute;
   right: 16px;
   bottom: 18px;
   width: 320px;
   max-width: calc(100vw - 32px);
-  padding: 12px;
-  border-radius: 16px;
+  padding: var(--pad-md);
+  border-radius: var(--radius-lg);
   background: rgba(10, 12, 22, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-soft);
+  backdrop-filter: var(--glass-blur);
   z-index: 16;
 }
 
@@ -353,8 +403,8 @@ body,
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft-2);
   background: rgba(0, 0, 0, 0.18);
 }
 
@@ -384,7 +434,9 @@ body,
   color: rgba(255, 255, 255, 0.65);
 }
 
-/* --- Unique “hyperdrive” overlay when playing --- */
+/* ==========================================================================
+   “Hyperdrive” overlay when playing
+   ========================================================================== */
 .scene.cinema::before {
   content: "";
   position: absolute;
@@ -411,66 +463,9 @@ body,
   }
 }
 
-/* --- Responsive layout --- */
-@media (max-width: 980px) {
-  .hud {
-    width: min(380px, calc(100vw - 32px));
-  }
-  .panel {
-    width: min(520px, calc(100vw - 32px));
-  }
-}
-
-/* Prevent MovieDock overlapping search dock on mid-width screens */
-@media (max-width: 1100px) {
-  .movieDock {
-    bottom: 110px;
-  } /* lift above searchDock */
-}
-
-@media (max-width: 640px) {
-  .hud {
-    left: 12px;
-    top: 12px;
-    width: calc(100vw - 24px);
-    max-height: 34vh;
-  }
-
-  .panel {
-    right: 12px;
-    left: 12px;
-    width: calc(100vw - 24px);
-    top: auto;
-    bottom: 92px; /* above searchDock */
-    max-height: 44vh;
-  }
-
-  .movieDock {
-    right: 12px;
-    bottom: 110px; /* above searchDock */
-    width: min(320px, calc(100vw - 24px));
-  }
-}
-
-.hud,
-.panel {
-  transition: transform 220ms ease, opacity 220ms ease;
-  will-change: transform, opacity;
-}
-
-/* Off-canvas behavior */
-.hud.isClosed {
-  transform: translateX(calc(-100% - 20px));
-  opacity: 0;
-  pointer-events: none;
-}
-
-.panel.isClosed {
-  transform: translateX(calc(100% + 20px));
-  opacity: 0;
-  pointer-events: none;
-}
-
+/* ==========================================================================
+   Chrome Bar (top-left, always visible)
+   ========================================================================== */
 .chromeBar {
   position: absolute;
   top: 16px;
@@ -480,17 +475,17 @@ body,
   align-items: center;
   z-index: 40;
   padding: 10px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: rgba(10, 12, 22, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-soft);
+  backdrop-filter: var(--glass-blur);
 }
 
 .iconBtn {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
   background: rgba(0, 0, 0, 0.22);
   color: rgba(255, 255, 255, 0.92);
   cursor: pointer;
@@ -515,18 +510,14 @@ body,
   height: 12px;
 }
 
+.hamburger,
 .hamburger::before,
-.hamburger::after,
-.hamburger {
+.hamburger::after {
   content: "";
   display: block;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 2px;
   height: 2px;
-}
-
-.hamburger {
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .hamburger::before {
@@ -555,12 +546,26 @@ body,
   justify-content: center;
 }
 
-/* Zoom group */
 .zoomGroup {
   display: inline-flex;
   gap: 8px;
   margin-left: 2px;
 }
+
+/* ==========================================================================
+   Responsive Layout
+   ========================================================================== */
+@media (max-width: 980px) {
+  .hud {
+    width: min(380px, calc(100vw - 32px));
+  }
+
+  .panel {
+    width: min(520px, calc(100vw - 32px));
+  }
+}
+
+/* Keep MovieDock above SearchDock on mid-width screens */
 @media (max-width: 1100px) {
   .movieDock {
     bottom: 110px;
@@ -573,9 +578,10 @@ body,
     left: 12px;
   }
 
+  /* HUD sits below chromeBar on small screens */
   .hud {
     left: 12px;
-    top: 64px; /* below chromeBar */
+    top: 64px;
     width: calc(100vw - 24px);
     max-height: 34vh;
   }
@@ -585,7 +591,13 @@ body,
     left: 12px;
     width: calc(100vw - 24px);
     top: auto;
-    bottom: 92px;
+    bottom: 92px; /* above searchDock */
     max-height: 44vh;
+  }
+
+  .movieDock {
+    right: 12px;
+    bottom: 110px; /* above searchDock */
+    width: min(320px, calc(100vw - 24px));
   }
 }

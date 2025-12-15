@@ -1,18 +1,32 @@
+import type { JSX } from "react";
 import type { StoryNode } from "../data/story";
 
-type Props = {
+type MovieDockProps = {
   story: StoryNode[];
   selectedId: string;
   playing: boolean;
-  setPlaying: (v: boolean) => void;
+  setPlaying: (value: boolean) => void;
 
-  // speed in milliseconds between slides
+  /** Speed in milliseconds between slides */
   speedMs: number;
-  setSpeedMs: (v: number) => void;
+  setSpeedMs: (value: number) => void;
 
+  /** Jump instantly to any node (manual selection should pause autoplay in the parent). */
   onSelect: (id: string) => void;
 };
 
+/**
+ * MovieDock
+ *
+ * Why: Provides a playful “slideshow” mode with direct scene jumping (film reel),
+ * while keeping the interaction model simple and predictable.
+ *
+ * Behavior is preserved:
+ * - Play/Pause toggles `playing`
+ * - Slider updates `speedMs`
+ * - Reel dots call `onSelect` (instant jump)
+ * - Current scene index + count displayed
+ */
 export default function MovieDock({
   story,
   selectedId,
@@ -21,12 +35,18 @@ export default function MovieDock({
   speedMs,
   setSpeedMs,
   onSelect,
-}: Props) {
-  const idx = Math.max(
+}: MovieDockProps): JSX.Element {
+  const currentIndex = Math.max(
     0,
     story.findIndex((s) => s.id === selectedId)
   );
-  const seconds = (speedMs / 1000).toFixed(1);
+  const secondsPerStar = (speedMs / 1000).toFixed(1);
+
+  const togglePlaying = () => setPlaying(!playing);
+
+  const handleSpeedChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    setSpeedMs(Number(e.target.value));
+  };
 
   return (
     <div className="movieDock" aria-label="Movie mode controls">
@@ -34,8 +54,9 @@ export default function MovieDock({
         <div className="movieTitle">Movie Mode</div>
 
         <button
+          type="button"
           className={`moviePlay ${playing ? "playing" : ""}`}
-          onClick={() => setPlaying(!playing)}
+          onClick={togglePlaying}
           aria-pressed={playing}
           aria-label={playing ? "Pause slideshow" : "Play slideshow"}
         >
@@ -46,7 +67,7 @@ export default function MovieDock({
 
       <div className="movieRow">
         <label className="movieLabel" htmlFor="speed">
-          Warp speed: <b>{seconds}s</b>/star
+          Warp speed: <b>{secondsPerStar}s</b>/star
         </label>
 
         <input
@@ -57,27 +78,30 @@ export default function MovieDock({
           max={5000}
           step={100}
           value={speedMs}
-          onChange={(e) => setSpeedMs(Number(e.target.value))}
+          onChange={handleSpeedChange}
           aria-label="Slideshow speed"
         />
+
         <div className="movieScale">
           <span>Fast</span>
           <span>Slow</span>
         </div>
       </div>
 
-      {/* Unique: “film reel” dots. Click any dot to jump instantly. */}
+      {/* “Film reel” dots: click any dot to jump instantly. */}
       <div className="movieReel" role="list" aria-label="Slideshow reel">
-        {story.map((s) => {
-          const active = s.id === selectedId;
+        {story.map((node) => {
+          const isActive = node.id === selectedId;
+
           return (
             <button
-              key={s.id}
-              className={`reelDot ${active ? "active" : ""}`}
-              onClick={() => onSelect(s.id)}
-              title={`${s.year} • ${s.title}`}
-              aria-label={`Jump to ${s.year} ${s.title}`}
-              aria-current={active ? "true" : "false"}
+              key={node.id}
+              type="button"
+              className={`reelDot ${isActive ? "active" : ""}`}
+              onClick={() => onSelect(node.id)}
+              title={`${node.year} • ${node.title}`}
+              aria-label={`Jump to ${node.year} ${node.title}`}
+              aria-current={isActive ? "true" : "false"}
               role="listitem"
             />
           );
@@ -85,7 +109,7 @@ export default function MovieDock({
       </div>
 
       <div className="movieFooter">
-        Scene <b>{idx + 1}</b> / {story.length}
+        Scene <b>{currentIndex + 1}</b> / {story.length}
       </div>
     </div>
   );

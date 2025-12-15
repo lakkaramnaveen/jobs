@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, type JSX } from "react";
 import type { StoryNode } from "../data/story";
 
-type Props = {
+type HudProps = {
   open: boolean;
   story: StoryNode[];
   selectedId: string;
@@ -9,23 +9,28 @@ type Props = {
   query: string;
 };
 
+/**
+ * HUD (Mission Control)
+ *
+ * Why: Provides a fast, keyboard-friendly index into the timeline without forcing
+ * users to hunt for stars in 3D space.
+ *
+ * Behavior is preserved:
+ * - Uses the same open/closed class toggle (`isClosed`).
+ * - Filters by title/subtitle/year using the query (case-insensitive).
+ * - Clicking a row calls `onSelect` and marks the active row.
+ */
 export default function HUD({
   open,
   story,
   selectedId,
   onSelect,
   query,
-}: Props) {
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return story;
-    return story.filter(
-      (s) =>
-        s.title.toLowerCase().includes(q) ||
-        s.subtitle.toLowerCase().includes(q) ||
-        String(s.year).includes(q)
-    );
-  }, [query, story]);
+}: HudProps): JSX.Element {
+  const filteredStory = useMemo(
+    () => filterStory(story, query),
+    [story, query]
+  );
 
   return (
     <aside
@@ -38,19 +43,22 @@ export default function HUD({
       </div>
 
       <div className="hudList" role="list">
-        {filtered.map((n) => {
-          const active = n.id === selectedId;
+        {filteredStory.map((node) => {
+          const isActive = node.id === selectedId;
+
           return (
             <button
-              key={n.id}
-              className={`hudItem ${active ? "active" : ""}`}
-              onClick={() => onSelect(n.id)}
-              aria-current={active ? "true" : "false"}
+              key={node.id}
+              type="button"
+              className={`hudItem ${isActive ? "active" : ""}`}
+              onClick={() => onSelect(node.id)}
+              aria-current={isActive ? "true" : "false"}
             >
-              <span className="hudYear">{n.year}</span>
+              <span className="hudYear">{node.year}</span>
+
               <span className="hudText">
-                <span className="hudItemTitle">{n.title}</span>
-                <span className="hudItemSub">{n.subtitle}</span>
+                <span className="hudItemTitle">{node.title}</span>
+                <span className="hudItemSub">{node.subtitle}</span>
               </span>
             </button>
           );
@@ -58,4 +66,25 @@ export default function HUD({
       </div>
     </aside>
   );
+}
+
+/* =============================================================================
+   Helpers
+   ============================================================================= */
+
+/**
+ * Why: Centralizes filter logic so the component stays render-focused and
+ * future filter rules (e.g., tags, dateLabel) can be added safely.
+ */
+function filterStory(story: StoryNode[], rawQuery: string): StoryNode[] {
+  const q = rawQuery.trim().toLowerCase();
+  if (!q) return story;
+
+  return story.filter((node) => {
+    return (
+      node.title.toLowerCase().includes(q) ||
+      node.subtitle.toLowerCase().includes(q) ||
+      String(node.year).includes(q)
+    );
+  });
 }

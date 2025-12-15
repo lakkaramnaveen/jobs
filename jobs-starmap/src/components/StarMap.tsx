@@ -1,8 +1,8 @@
 // src/components/StarMap.tsx
 import { OrbitControls, Sparkles } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import type { MutableRefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { JSX, MutableRefObject } from "react";
 import * as THREE from "three";
 
 import type { StoryNode } from "../data/story";
@@ -13,74 +13,55 @@ import StarNode from "./StarNode";
 // npm i three-stdlib
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
-type Props = {
+type StarMapProps = {
   story: StoryNode[];
   selectedId: string;
-
-  // Clicking a star should jump (warp) to that node
   onSelect: (id: string) => void;
-
-  // Called when the user starts manual control (drag/zoom)
   onUserControlStart?: () => void;
-
-  // Exposes OrbitControls to parent (for global zoom buttons / shortcuts)
   controlsRefExternal?: MutableRefObject<OrbitControlsImpl | null>;
 };
 
-// ---------- Layout helpers (less rigid) ----------
-function hashToUnit(str: string) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
-  }
-  // 0..1
-  return (h >>> 0) / 4294967295;
-}
-
-function makePositions(story: StoryNode[]) {
-  const pts: Record<string, THREE.Vector3> = {};
-
-  const radiusBase = 1.2;
-  const spiralStep = 0.78;
-
-  story.forEach((node, i) => {
-    const t = i * 0.62;
-    const r = radiusBase + i * spiralStep;
-
-    // Small spacing bumps for big chapters
-    const chapterBoost =
-      node.id === "exit-apple" || node.id === "return" ? 2.0 : 0;
-
-    // Organic jitter (deterministic per id)
-    const seed = hashToUnit(node.id);
-    const jx = (seed - 0.5) * 0.8;
-    const jy = (hashToUnit(node.id + "y") - 0.5) * 0.6;
-    const jz = (hashToUnit(node.id + "z") - 0.5) * 0.4;
-
-    const x = Math.cos(t) * (r + chapterBoost) + jx;
-    const y = Math.sin(t) * (r * 0.55) + jy;
-    const z = -i * 1.15 + jz;
-
-    pts[node.id] = new THREE.Vector3(x, y, z);
-  });
-
-  // Make sure birth is exactly center
-  pts["birth"] = new THREE.Vector3(0, 0, 0);
-  return pts;
-}
-
-// Easing for “warp” feel
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-type FocusAnim = {
-  start: number; // clock seconds
-  duration: number;
-  fromPos: THREE.Vector3;
-  toPos: THREE.Vector3;
+type FocusAnimation = {
+  startSeconds: number;
+  durationSeconds: number;
+  fromCameraPos: THREE.Vector3;
+  toCameraPos: THREE.Vector3;
   fromTarget: THREE.Vector3;
   toTarget: THREE.Vector3;
+};
+
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+
+const CAMERA = {
+  minDistance: 6,
+  maxDistance: 42,
+  rotateSpeed: 0.45,
+  zoomSpeed: 0.8,
+  dampingFactor: 0.08,
+  warpDurationSeconds: 0.55,
+} as const;
+
+const DRIFT = {
+  x: 0.25,
+  y: 0.18,
+  damp: 6,
+} as const;
+
+const CONSTELLATION = {
+  curveTension: 0.45,
+  points: 240,
+  lineOpacity: 0.22,
+  glowOpacity: 0.08,
+} as const;
+
+const COMET = {
+  speed: 0.06, // curve u per second
+} as const;
+
+const BRIGHTNESS: Record<string, number> = {
+  birth: 4.0,
+  iphone: 2.6,
+  return: 2.3,
 };
 
 export default function StarMap({
@@ -89,42 +70,40 @@ export default function StarMap({
   onSelect,
   onUserControlStart,
   controlsRefExternal,
-}: Props) {
+}: StarMapProps): JSX.Element {
   const { camera, pointer, clock } = useThree();
 
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
-  const focusRef = useRef<FocusAnim | null>(null);
+  const focusRef = useRef<FocusAnimation | null>(null);
 
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const positions = useMemo(() => makePositions(story), [story]);
-  const selectedPos = positions[selectedId] ?? new THREE.Vector3(0, 0, 0);
+  const positionsById = useMemo(() => computeNodePositions(story), [story]);
 
-  // Smooth constellation curve (less rigid than straight segments)
-  const curvePoints = useMemo(() => {
-    const base = story
-      .map((n) => positions[n.id])
-      .filter((v): v is THREE.Vector3 => Boolean(v));
+  // Note: This preserves the original behavior of using the stored vector (not a clone).
+  const selectedPosition = positionsById[selectedId] ?? ORIGIN;
 
-    const curve = new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
-    return curve.getPoints(240);
-  }, [story, positions]);
+  const constellationCurve = useMemo(
+    () =>
+      createConstellationCurve(
+        story,
+        positionsById,
+        CONSTELLATION.curveTension
+      ),
+    [story, positionsById]
+  );
 
-  const constellationGeometry = useMemo(() => {
-    return new THREE.BufferGeometry().setFromPoints(curvePoints);
-  }, [curvePoints]);
+  const constellationGeometry = useMemo(
+    () =>
+      new THREE.BufferGeometry().setFromPoints(
+        constellationCurve.getPoints(CONSTELLATION.points)
+      ),
+    [constellationCurve]
+  );
 
-  // Comet that travels along the constellation path (playful!)
   const cometRef = useRef<THREE.Group>(null);
-  const cometCurve = useMemo(() => {
-    const base = story
-      .map((n) => positions[n.id])
-      .filter((v): v is THREE.Vector3 => Boolean(v));
 
-    return new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
-  }, [story, positions]);
-
-  // Pause Movie Mode (or any autoplay) when user starts controlling camera
+  // Pause Movie Mode (or any autoplay) when the user starts controlling the camera.
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !onUserControlStart) return;
@@ -137,90 +116,77 @@ export default function StarMap({
     };
   }, [onUserControlStart]);
 
-  // When a new star is selected, “warp” the camera directly to it
+  // When a new node is selected, “warp” directly to it.
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // Use the same clock as useFrame to keep timing consistent
-    const start = clock.getElapsedTime();
+    focusRef.current = buildFocusAnimation({
+      camera,
+      controls,
+      clock,
+      target: selectedPosition,
+      durationSeconds: CAMERA.warpDurationSeconds,
+    });
+  }, [camera, clock, selectedId, selectedPosition]);
 
-    const fromTarget = controls.target.clone();
-    const fromPos = camera.position.clone();
-    const toTarget = selectedPos.clone();
-
-    // Keep current viewing direction & distance for continuity
-    const currentDist = THREE.MathUtils.clamp(
-      fromPos.distanceTo(fromTarget),
-      6,
-      42
-    );
-
-    let dir = fromPos.clone().sub(fromTarget);
-    if (dir.lengthSq() < 1e-6) dir = new THREE.Vector3(0, 0, 1);
-    dir.normalize();
-
-    const toPos = toTarget.clone().add(dir.multiplyScalar(currentDist));
-
-    focusRef.current = {
-      start,
-      duration: 0.55,
-      fromPos,
-      toPos,
-      fromTarget,
-      toTarget,
-    };
-  }, [selectedId, selectedPos, camera, clock]);
-
-  const onHover = useCallback((id: string | null) => setHovered(id), []);
+  const handleHover = useCallback((id: string | null) => setHoveredId(id), []);
 
   useFrame((state, dt) => {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // Small “space drift” based on cursor, without breaking controls
-    const driftX = pointer.x * 0.25;
-    const driftY = pointer.y * 0.18;
+    const driftX = pointer.x * DRIFT.x;
+    const driftY = pointer.y * DRIFT.y;
 
-    const anim = focusRef.current;
-    const now = state.clock.getElapsedTime();
+    const nowSeconds = state.clock.getElapsedTime();
+    const activeAnim = focusRef.current;
 
-    if (anim) {
-      const t = THREE.MathUtils.clamp((now - anim.start) / anim.duration, 0, 1);
-      const e = easeInOutCubic(t);
+    if (activeAnim) {
+      const t = clamp01(
+        (nowSeconds - activeAnim.startSeconds) / activeAnim.durationSeconds
+      );
+      const eased = easeInOutCubic(t);
 
-      camera.position.lerpVectors(anim.fromPos, anim.toPos, e);
-      controls.target.lerpVectors(anim.fromTarget, anim.toTarget, e);
+      camera.position.lerpVectors(
+        activeAnim.fromCameraPos,
+        activeAnim.toCameraPos,
+        eased
+      );
+      controls.target.lerpVectors(
+        activeAnim.fromTarget,
+        activeAnim.toTarget,
+        eased
+      );
 
       if (t >= 1) focusRef.current = null;
     } else {
-      // If not animating, gently keep target centered on selected star
+      // Keep the “camera target” gently centered on the selected star (with a tiny cursor drift).
       controls.target.x = THREE.MathUtils.damp(
         controls.target.x,
-        selectedPos.x + driftX,
-        6,
+        selectedPosition.x + driftX,
+        DRIFT.damp,
         dt
       );
       controls.target.y = THREE.MathUtils.damp(
         controls.target.y,
-        selectedPos.y + driftY,
-        6,
+        selectedPosition.y + driftY,
+        DRIFT.damp,
         dt
       );
       controls.target.z = THREE.MathUtils.damp(
         controls.target.z,
-        selectedPos.z,
-        6,
+        selectedPosition.z,
+        DRIFT.damp,
         dt
       );
     }
 
     controls.update();
 
-    // Move comet along curve
     if (cometRef.current) {
-      const u = (now * 0.06) % 1;
-      cometRef.current.position.copy(cometCurve.getPointAt(u));
+      const u = (nowSeconds * COMET.speed) % 1;
+      cometRef.current.position.copy(constellationCurve.getPointAt(u));
     }
   });
 
@@ -229,41 +195,54 @@ export default function StarMap({
       <ambientLight intensity={0.35} />
       <pointLight position={[3, 6, 7]} intensity={1.2} />
 
-      {/* Zoom / rotate controls */}
       <OrbitControls
         ref={(c) => {
-          // Internal ref (StarMap)
-          controlsRef.current = c as unknown as OrbitControlsImpl;
+          const typed = c as unknown as OrbitControlsImpl;
+          controlsRef.current = typed;
 
-          // External ref (SpaceScene uses it for global zoom buttons/shortcuts)
           if (controlsRefExternal) {
-            controlsRefExternal.current = c as unknown as OrbitControlsImpl;
+            // eslint-disable-next-line react-hooks/immutability
+            controlsRefExternal.current = typed;
           }
         }}
         enableDamping
-        dampingFactor={0.08}
+        dampingFactor={CAMERA.dampingFactor}
         enableZoom
-        minDistance={6}
-        maxDistance={42}
+        minDistance={CAMERA.minDistance}
+        maxDistance={CAMERA.maxDistance}
         enablePan={false}
-        rotateSpeed={0.45}
-        zoomSpeed={0.8}
+        rotateSpeed={CAMERA.rotateSpeed}
+        zoomSpeed={CAMERA.zoomSpeed}
       />
 
-      {/* Fast points-based starfield */}
       <BackgroundStarsPoints count={4500} radius={130} />
 
-      {/* Constellation curve (base line) */}
-      <line geometry={constellationGeometry}>
-        <lineBasicMaterial color="#4aa3ff" transparent opacity={0.22} />
-      </line>
+      <primitive
+        object={
+          new THREE.Line(
+            constellationGeometry,
+            new THREE.LineBasicMaterial({
+              color: "#4aa3ff",
+              transparent: true,
+              opacity: CONSTELLATION.lineOpacity,
+            })
+          )
+        }
+      />
 
-      {/* Glow line on top (adds “magic”, still cheap) */}
-      <line geometry={constellationGeometry}>
-        <lineBasicMaterial color="#9ad7ff" transparent opacity={0.08} />
-      </line>
+      <primitive
+        object={
+          new THREE.Line(
+            constellationGeometry,
+            new THREE.LineBasicMaterial({
+              color: "#9ad7ff",
+              transparent: true,
+              opacity: CONSTELLATION.glowOpacity,
+            })
+          )
+        }
+      />
 
-      {/* Sparkle field around the constellation region */}
       <Sparkles
         count={140}
         scale={[12, 6, 18]}
@@ -272,7 +251,6 @@ export default function StarMap({
         opacity={0.25}
       />
 
-      {/* Traveling comet */}
       <group ref={cometRef}>
         <mesh>
           <sphereGeometry args={[0.08, 16, 16]} />
@@ -287,20 +265,10 @@ export default function StarMap({
         />
       </group>
 
-      {/* Stars */}
       {story.map((node) => {
-        const pos = positions[node.id];
+        const pos = positionsById[node.id];
         const isSelected = node.id === selectedId;
-        const isHovered = hovered === node.id;
-
-        const brightness =
-          node.id === "birth"
-            ? 4.0
-            : node.id === "iphone"
-            ? 2.6
-            : node.id === "return"
-            ? 2.3
-            : 1.6;
+        const isHovered = hoveredId === node.id;
 
         return (
           <StarNode
@@ -308,14 +276,129 @@ export default function StarMap({
             id={node.id}
             label={`${node.year} • ${node.title}`}
             basePosition={pos}
-            brightness={brightness}
+            brightness={getNodeBrightness(node.id)}
             selected={isSelected}
             hovered={isHovered}
-            onHover={onHover}
+            onHover={handleHover}
             onSelect={onSelect}
           />
         );
       })}
     </group>
   );
+}
+
+/* =============================================================================
+   Helpers (pure functions)
+   ============================================================================= */
+
+/**
+ * Why: keeps layout “organic” but deterministic (same id -> same position).
+ */
+function hashToUnit(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h = Math.imul(h ^ input.charCodeAt(i), 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+function computeNodePositions(
+  story: StoryNode[]
+): Record<string, THREE.Vector3> {
+  const positions: Record<string, THREE.Vector3> = {};
+
+  const radiusBase = 1.2;
+  const spiralStep = 0.78;
+
+  story.forEach((node, i) => {
+    const t = i * 0.62;
+    const r = radiusBase + i * spiralStep;
+
+    const chapterBoost =
+      node.id === "exit-apple" || node.id === "return" ? 2.0 : 0;
+
+    const seed = hashToUnit(node.id);
+    const jx = (seed - 0.5) * 0.8;
+    const jy = (hashToUnit(node.id + "y") - 0.5) * 0.6;
+    const jz = (hashToUnit(node.id + "z") - 0.5) * 0.4;
+
+    const x = Math.cos(t) * (r + chapterBoost) + jx;
+    const y = Math.sin(t) * (r * 0.55) + jy;
+    const z = -i * 1.15 + jz;
+
+    positions[node.id] = new THREE.Vector3(x, y, z);
+  });
+
+  positions["birth"] = new THREE.Vector3(0, 0, 0);
+  return positions;
+}
+
+function createConstellationCurve(
+  story: StoryNode[],
+  positionsById: Record<string, THREE.Vector3>,
+  tension: number
+): THREE.CatmullRomCurve3 {
+  const points = story
+    .map((n) => positionsById[n.id])
+    .filter((v): v is THREE.Vector3 => Boolean(v));
+
+  // Defensive: if data is incomplete, avoid throwing while keeping rendering stable.
+  const safePoints =
+    points.length >= 2
+      ? points
+      : [ORIGIN, ORIGIN.clone().add(new THREE.Vector3(0, 0, -0.001))];
+
+  return new THREE.CatmullRomCurve3(safePoints, false, "catmullrom", tension);
+}
+
+function getNodeBrightness(nodeId: string): number {
+  return BRIGHTNESS[nodeId] ?? 1.6;
+}
+
+function buildFocusAnimation(params: {
+  camera: THREE.Camera;
+  controls: OrbitControlsImpl;
+  clock: THREE.Clock;
+  target: THREE.Vector3;
+  durationSeconds: number;
+}): FocusAnimation {
+  const { camera, controls, clock, target, durationSeconds } = params;
+
+  const startSeconds = clock.getElapsedTime();
+
+  const fromTarget = controls.target.clone();
+  const fromCameraPos = camera.position.clone();
+  const toTarget = target.clone();
+
+  const currentDist = THREE.MathUtils.clamp(
+    fromCameraPos.distanceTo(fromTarget),
+    CAMERA.minDistance,
+    CAMERA.maxDistance
+  );
+
+  let direction = fromCameraPos.clone().sub(fromTarget);
+  if (direction.lengthSq() < 1e-6) direction = new THREE.Vector3(0, 0, 1);
+  direction.normalize();
+
+  const toCameraPos = toTarget
+    .clone()
+    .add(direction.multiplyScalar(currentDist));
+
+  return {
+    startSeconds,
+    durationSeconds,
+    fromCameraPos,
+    toCameraPos,
+    fromTarget,
+    toTarget,
+  };
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function clamp01(x: number): number {
+  return Math.min(1, Math.max(0, x));
 }

@@ -1,9 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type JSX,
+} from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
-import { STORY, type StoryNode } from "../data/story";
+import { STORY } from "../data/story";
 import StarMap from "./StarMap";
 import StoryPanel from "./StoryPanel";
 import HUD from "./HUD";
@@ -11,180 +19,229 @@ import SearchDock from "./SearchDock";
 import MovieDock from "./MovieDock";
 import ChromeBar from "./ChromeBar";
 
-const MOBILE_BP = 980;
+const MOBILE_BREAKPOINT_PX = 980;
 
-export default function SpaceScene() {
+const CANVAS_CONFIG = {
+  dpr: 1,
+  camera: {
+    position: [0, 0, 14] as [number, number, number],
+    fov: 55,
+    near: 0.1,
+    far: 250,
+  },
+  gl: {
+    antialias: false,
+    alpha: false,
+    powerPreference: "high-performance" as const,
+  },
+  background: "#000006",
+} as const;
+
+const UI_SELECTOR = ".hud, .panel, .searchDock, .movieDock";
+
+/**
+ * SpaceScene
+ *
+ * Why this component exists:
+ * - Owns the "app shell" state (selected node, panels, search, movie mode).
+ * - Bridges UI and 3D controls without letting UI event handling fight OrbitControls.
+ *
+ * Behavior is preserved:
+ * - Manual selection pauses Movie Mode.
+ * - Autoplay advances on a timer (doesn't self-pause).
+ * - Panels auto-close on small screens; manual selection opens the details panel.
+ * - Global zoom works with Alt/Ctrl/⌘ + wheel anywhere (panels still scroll normally otherwise).
+ */
+export default function SpaceScene(): JSX.Element {
   const [selectedId, setSelectedId] = useState<string>("birth");
   const [query, setQuery] = useState<string>("");
 
   // Movie Mode
-  const [playing, setPlaying] = useState(false);
-  const [speedMs, setSpeedMs] = useState(1600);
-  const loop = true;
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [slideDelayMs, setSlideDelayMs] = useState(1600);
+  const loopSlides = true;
 
-  // Responsive panels: closed by default on small screens
-  const [hudOpen, setHudOpen] = useState(() => window.innerWidth > MOBILE_BP);
-  const [panelOpen, setPanelOpen] = useState(
-    () => window.innerWidth > MOBILE_BP
+  // Panels: closed by default on small screens
+  const [isHudOpen, setIsHudOpen] = useState(
+    () => window.innerWidth > MOBILE_BREAKPOINT_PX
+  );
+  const [isPanelOpen, setIsPanelOpen] = useState(
+    () => window.innerWidth > MOBILE_BREAKPOINT_PX
   );
 
-  // OrbitControls ref so we can zoom globally (even over UI)
+  // OrbitControls reference for global zoom
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
-  const selected = useMemo(
-    () => STORY.find((s) => s.id === selectedId) ?? STORY[0],
-    [selectedId]
-  );
+  const selectedNode = useMemo(() => {
+    return STORY.find((s) => s.id === selectedId) ?? STORY[0];
+  }, [selectedId]);
 
-  // Manual navigation pauses Movie Mode.
-  // On mobile/tablet, we auto-open the details panel so the user sees what they clicked.
-  const selectManual = useCallback((id: string) => {
-    setPlaying(false);
+  /**
+   * Manual selection always pauses autoplay.
+   * Why: user intent should "win" over automation.
+   */
+  const selectNodeManually = useCallback((id: string) => {
+    setIsPlaying(false);
     setSelectedId(id);
 
-    if (window.innerWidth <= MOBILE_BP) {
-      setPanelOpen(true);
-      setHudOpen(false);
+    if (window.innerWidth <= MOBILE_BREAKPOINT_PX) {
+      setIsPanelOpen(true);
+      setIsHudOpen(false);
     }
   }, []);
 
-  // Slideshow timer (auto-advance should NOT call selectManual, otherwise it pauses itself)
+  // Autoplay (slideshow) advances by index without calling manual-select (otherwise it pauses itself).
   useEffect(() => {
-    if (!playing) return;
+    if (!isPlaying) return;
 
-    const currentIdx = Math.max(
+    const currentIndex = Math.max(
       0,
       STORY.findIndex((s) => s.id === selectedId)
     );
-    const last = STORY.length - 1;
-    const nextIdx = currentIdx === last ? (loop ? 0 : last) : currentIdx + 1;
+    const lastIndex = STORY.length - 1;
 
-    const t = window.setTimeout(() => {
-      if (!loop && currentIdx === last) {
-        setPlaying(false);
+    const nextIndex =
+      currentIndex === lastIndex
+        ? loopSlides
+          ? 0
+          : lastIndex
+        : currentIndex + 1;
+
+    const timerId = window.setTimeout(() => {
+      if (!loopSlides && currentIndex === lastIndex) {
+        setIsPlaying(false);
         return;
       }
-      setSelectedId(STORY[nextIdx].id);
-    }, speedMs);
+      setSelectedId(STORY[nextIndex].id);
+    }, slideDelayMs);
 
-    return () => window.clearTimeout(t);
-  }, [playing, speedMs, selectedId, loop]);
+    return () => window.clearTimeout(timerId);
+  }, [isPlaying, slideDelayMs, selectedId, loopSlides]);
 
   // Keep panel defaults in sync with breakpoint changes
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BP}px)`);
+    const mediaQuery = window.matchMedia(
+      `(max-width: ${MOBILE_BREAKPOINT_PX}px)`
+    );
+
     const apply = () => {
-      if (mq.matches) {
-        setHudOpen(false);
-        setPanelOpen(false);
+      if (mediaQuery.matches) {
+        setIsHudOpen(false);
+        setIsPanelOpen(false);
       } else {
-        setHudOpen(true);
-        setPanelOpen(true);
+        setIsHudOpen(true);
+        setIsPanelOpen(true);
       }
     };
+
     apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    mediaQuery.addEventListener("change", apply);
+    return () => mediaQuery.removeEventListener("change", apply);
   }, []);
 
   // ---- Global zoom helpers (entire page) ----
-  const zoomByScale = useCallback((scale: number) => {
-    const controls = controlsRef.current;
-    if (!controls) return;
 
-    // Pause Movie Mode on any user-driven zoom
-    setPlaying(false);
+  const pauseAutoplay = useCallback(() => setIsPlaying(false), []);
 
-    const cam = controls.object as THREE.PerspectiveCamera;
-    const target = controls.target.clone();
+  const zoomByScale = useCallback(
+    (scale: number) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
 
-    const dir = cam.position.clone().sub(target);
-    if (dir.lengthSq() < 1e-8) dir.set(0, 0, 1);
-    dir.normalize();
+      pauseAutoplay();
 
-    const dist = cam.position.distanceTo(target);
+      // OrbitControls exposes the camera as `object`
+      const camera = controls.object as THREE.PerspectiveCamera;
+      const target = controls.target.clone();
 
-    // Respect the same min/max as your OrbitControls config
-    const minD = (controls as any).minDistance ?? 6;
-    const maxD = (controls as any).maxDistance ?? 42;
+      const direction = camera.position.clone().sub(target);
+      if (direction.lengthSq() < 1e-8) direction.set(0, 0, 1);
+      direction.normalize();
 
-    const nextDist = THREE.MathUtils.clamp(dist * scale, minD, maxD);
+      const currentDistance = camera.position.distanceTo(target);
 
-    cam.position.copy(target.add(dir.multiplyScalar(nextDist)));
-    controls.update();
-  }, []);
+      // Respect OrbitControls min/max distance
+      const minDistance = (controls as any).minDistance ?? 6;
+      const maxDistance = (controls as any).maxDistance ?? 42;
 
-  const onZoomIn = useCallback(() => zoomByScale(0.9), [zoomByScale]); // closer
-  const onZoomOut = useCallback(() => zoomByScale(1.12), [zoomByScale]); // farther
+      const nextDistance = THREE.MathUtils.clamp(
+        currentDistance * scale,
+        minDistance,
+        maxDistance
+      );
 
-  // Global wheel zoom: Alt/Ctrl/⌘ + wheel works anywhere, even over panels.
-  // Without a modifier, scrolling inside panels remains normal.
+      camera.position.copy(target.add(direction.multiplyScalar(nextDistance)));
+      controls.update();
+    },
+    [pauseAutoplay]
+  );
+
+  const handleZoomIn = useCallback(() => zoomByScale(0.9), [zoomByScale]);
+  const handleZoomOut = useCallback(() => zoomByScale(1.12), [zoomByScale]);
+
+  /**
+   * Global wheel zoom:
+   * - Alt/Ctrl/⌘ + wheel zooms anywhere (even over UI overlays)
+   * - Regular wheel scroll inside panels remains normal
+   */
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       const controls = controlsRef.current;
       if (!controls) return;
 
-      const overUI = (e.target as HTMLElement | null)?.closest(
-        ".hud, .panel, .searchDock, .movieDock"
-      );
-
+      const targetEl = e.target as HTMLElement | null;
+      const isOverUi = Boolean(targetEl?.closest(UI_SELECTOR));
       const wantsGlobalZoom = e.altKey || e.ctrlKey || e.metaKey;
 
-      // If the user is scrolling a panel normally, let it scroll.
-      if (overUI && !wantsGlobalZoom) return;
+      if (isOverUi && !wantsGlobalZoom) return;
 
-      // Otherwise, treat as zoom (and prevent page scroll)
       e.preventDefault();
-      const scale = e.deltaY > 0 ? 1.1 : 0.92;
-      zoomByScale(scale);
+      zoomByScale(e.deltaY > 0 ? 1.1 : 0.92);
     };
 
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel as any);
+    return () => window.removeEventListener("wheel", onWheel);
   }, [zoomByScale]);
 
   return (
-    <div className={`scene ${playing ? "cinema" : ""}`}>
+    <div className={`scene ${isPlaying ? "cinema" : ""}`}>
       <Canvas
-        dpr={1}
-        gl={{
-          antialias: false,
-          alpha: false,
-          powerPreference: "high-performance",
-        }}
-        camera={{ position: [0, 0, 14], fov: 55, near: 0.1, far: 250 }}
-        style={{ touchAction: "none" }} // improves gesture handling on canvas
+        dpr={CANVAS_CONFIG.dpr}
+        gl={CANVAS_CONFIG.gl}
+        camera={CANVAS_CONFIG.camera}
+        style={{ touchAction: "none" }}
       >
-        <color attach="background" args={["#000006"]} />
+        <color attach="background" args={[CANVAS_CONFIG.background]} />
         <StarMap
           story={STORY}
           selectedId={selectedId}
-          onSelect={selectManual}
-          onUserControlStart={() => setPlaying(false)} // drag/zoom pauses
-          controlsRefExternal={controlsRef} // enables global zoom buttons/shortcuts
+          onSelect={selectNodeManually}
+          onUserControlStart={pauseAutoplay}
+          controlsRefExternal={controlsRef}
         />
       </Canvas>
 
       <ChromeBar
-        hudOpen={hudOpen}
-        panelOpen={panelOpen}
-        onToggleHud={() => setHudOpen((v) => !v)}
-        onTogglePanel={() => setPanelOpen((v) => !v)}
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
+        hudOpen={isHudOpen}
+        panelOpen={isPanelOpen}
+        onToggleHud={() => setIsHudOpen((v) => !v)}
+        onTogglePanel={() => setIsPanelOpen((v) => !v)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
       />
 
       <HUD
-        open={hudOpen}
+        open={isHudOpen}
         story={STORY}
         selectedId={selectedId}
-        onSelect={selectManual}
+        onSelect={selectNodeManually}
         query={query}
       />
+
       <StoryPanel
-        open={panelOpen}
-        key={selected.id}
-        node={selected as StoryNode}
+        open={isPanelOpen}
+        key={selectedNode.id}
+        node={selectedNode}
       />
 
       <SearchDock query={query} setQuery={setQuery} />
@@ -192,11 +249,11 @@ export default function SpaceScene() {
       <MovieDock
         story={STORY}
         selectedId={selectedId}
-        playing={playing}
-        setPlaying={setPlaying}
-        speedMs={speedMs}
-        setSpeedMs={setSpeedMs}
-        onSelect={selectManual} // reel-dot click pauses
+        playing={isPlaying}
+        setPlaying={setIsPlaying}
+        speedMs={slideDelayMs}
+        setSpeedMs={setSlideDelayMs}
+        onSelect={selectNodeManually}
       />
     </div>
   );

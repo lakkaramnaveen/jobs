@@ -1,4 +1,26 @@
-export type StoryNode = {
+// src/data/story.ts
+
+/**
+ * Timeline node rendered as a “star” in the 3D constellation.
+ *
+ * Design note (why this shape):
+ * - The UI needs both a kid-friendly summary and a deeper paragraph per node.
+ * - Media is optional and intentionally modeled as a single primary image for simplicity/perf.
+ * - Sources are normalized as {label,url} pairs to keep attribution explicit in the UI.
+ */
+
+export type SourceLink = Readonly<{
+  label: string;
+  url: string;
+}>;
+
+export type StoryImage = Readonly<{
+  url: string;
+  alt: string;
+  credit: string;
+}>;
+
+export type StoryNode = Readonly<{
   id: string;
   year: number;
   dateLabel?: string;
@@ -8,16 +30,52 @@ export type StoryNode = {
   kid: string; // short + simple
   deep: string; // richer detail
 
-  // Optional media (use Wikimedia where possible for licensing clarity)
-  image?: {
-    url: string;
-    alt: string;
-    credit: string; // short attribution
-  };
+  image?: StoryImage;
 
-  // Sources as plain URLs (kept as strings for your UI)
-  sources: { label: string; url: string }[];
-};
+  sources: SourceLink[];
+}>;
+
+/**
+ * Small helpers to reduce repetition and keep objects consistent.
+ * Why: prevents subtle drift in key names and keeps node definitions focused on content.
+ */
+const source = (label: string, url: string): SourceLink => ({ label, url });
+const image = (url: string, alt: string, credit: string): StoryImage => ({
+  url,
+  alt,
+  credit,
+});
+
+/**
+ * Reused sources (DRY).
+ * Why: repeated sources should be identical and easy to update in one place.
+ */
+const SOURCES = {
+  britannicaJobs: source(
+    "Britannica: Steve Jobs",
+    "https://www.britannica.com/biography/Steve-Jobs"
+  ),
+  stanford2005: source(
+    "Stanford: 2005 Commencement remarks (prepared text)",
+    "https://news.stanford.edu/stories/2005/06/steve-jobs-commencement-address-prepared-text"
+  ),
+  appleIpodPR: source(
+    "Apple Press Release: iPod",
+    "https://www.apple.com/newsroom/2001/10/23Apple-Introduces-iPod/"
+  ),
+  appleIphonePR: source(
+    "Apple Press Release: iPhone",
+    "https://www.apple.com/newsroom/2007/01/09Apple-Reinvents-the-Phone-with-iPhone/"
+  ),
+  appleResignPR: source(
+    "Apple Press Release: Resignation",
+    "https://www.apple.com/newsroom/2011/08/24Steve-Jobs-Resigns-as-CEO-of-Apple/"
+  ),
+  appleObit: source(
+    "Apple: Steve Jobs (1955–2011)",
+    "https://www.apple.com/newsroom/2011/10/05Steve-Jobs-1955-2011/"
+  ),
+} as const;
 
 export const STORY: StoryNode[] = [
   {
@@ -28,17 +86,12 @@ export const STORY: StoryNode[] = [
     subtitle: "San Francisco → adopted and raised in Silicon Valley",
     kid: "Steve Jobs was born in San Francisco and was adopted as a baby. He grew up in California, right where computers were starting to boom.",
     deep: "Steve Jobs was born February 24, 1955, in San Francisco. He was adopted and raised in the Bay Area, which later became the heart of Silicon Valley.",
-    image: {
-      url: "https://commons.wikimedia.org/wiki/File:Steve_Jobs_Headshot_2010.JPG",
-      alt: "Steve Jobs holding an iPhone at WWDC",
-      credit: "Matthew Yohe (CC BY-SA) via Wikimedia Commons",
-    },
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-    ],
+    image: image(
+      "https://commons.wikimedia.org/wiki/File:Steve_Jobs_Headshot_2010.JPG",
+      "Steve Jobs holding an iPhone at WWDC",
+      "Matthew Yohe (CC BY-SA) via Wikimedia Commons"
+    ),
+    sources: [SOURCES.britannicaJobs],
   },
 
   {
@@ -50,10 +103,10 @@ export const STORY: StoryNode[] = [
     kid: "Steve met Steve Wozniak. Together, they could build things other people only imagined.",
     deep: "Jobs met Steve Wozniak through mutual connections while they were young; their friendship and technical partnership became the spark for Apple.",
     sources: [
-      {
-        label: "Computer History Museum: Jobs & Woz meet",
-        url: "https://computerhistory.org/blog/steve-jobs-and-steve-wozniak-meet/",
-      },
+      source(
+        "Computer History Museum: Jobs & Woz meet",
+        "https://computerhistory.org/blog/steve-jobs-and-steve-wozniak-meet/"
+      ),
     ],
   },
 
@@ -66,14 +119,11 @@ export const STORY: StoryNode[] = [
     kid: "Steve tried college, but he didn’t want the normal route. He chased what fascinated him.",
     deep: "Jobs attended Reed College in Oregon. His unconventional choices—learning by curiosity rather than checklists—became part of his style.",
     sources: [
-      {
-        label: "Reed College: Steve Jobs at Reed",
-        url: "https://www.reed.edu/reed-magazine/articles/2011/steve-jobs-1955-2011.html",
-      },
-      {
-        label: "Stanford: 2005 Commencement remarks (prepared text)",
-        url: "https://news.stanford.edu/stories/2005/06/steve-jobs-commencement-address-prepared-text",
-      },
+      source(
+        "Reed College: Steve Jobs at Reed",
+        "https://www.reed.edu/reed-magazine/articles/2011/steve-jobs-1955-2011.html"
+      ),
+      SOURCES.stanford2005,
     ],
   },
 
@@ -85,12 +135,7 @@ export const STORY: StoryNode[] = [
     subtitle: "Atari + searching for meaning",
     kid: "Steve worked, learned fast, and went exploring for big ideas about life.",
     deep: "Jobs worked at Atari and pursued experiences that shaped his worldview—mixing technology with art, simplicity, and focus.",
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-    ],
+    sources: [SOURCES.britannicaJobs],
   },
 
   {
@@ -102,14 +147,11 @@ export const STORY: StoryNode[] = [
     kid: "Steve and Woz started Apple. They wanted computers to be for regular people, not just big companies.",
     deep: "Apple was founded April 1, 1976 by Steve Jobs, Steve Wozniak, and Ronald Wayne—one of the defining inflection points in personal computing.",
     sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-      {
-        label: "Wikipedia overview (cross-check dates)",
-        url: "https://en.wikipedia.org/wiki/Apple_Computer",
-      },
+      SOURCES.britannicaJobs,
+      source(
+        "Wikipedia overview (cross-check dates)",
+        "https://en.wikipedia.org/wiki/Apple_Computer"
+      ),
     ],
   },
 
@@ -121,20 +163,17 @@ export const STORY: StoryNode[] = [
     subtitle: "A handmade computer becomes a real product",
     kid: "The Apple I was like a ‘starter rocket’. It proved they could actually sell a computer.",
     deep: "Apple I was one of Apple’s first products—an early personal computer that helped move the company from hobby project to real business.",
-    image: {
-      url: "https://commons.wikimedia.org/wiki/File:Apple_I_Computer.jpg",
-      alt: "Apple I computer on display",
-      credit: "Ed Uthman (CC BY-SA) via Wikimedia Commons",
-    },
+    image: image(
+      "https://commons.wikimedia.org/wiki/File:Apple_I_Computer.jpg",
+      "Apple I computer on display",
+      "Ed Uthman (CC BY-SA) via Wikimedia Commons"
+    ),
     sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-      {
-        label: "Wikimedia Commons: Apple I image",
-        url: "https://commons.wikimedia.org/wiki/File:Apple_I_Computer.jpg",
-      },
+      SOURCES.britannicaJobs,
+      source(
+        "Wikimedia Commons: Apple I image",
+        "https://commons.wikimedia.org/wiki/File:Apple_I_Computer.jpg"
+      ),
     ],
   },
 
@@ -146,12 +185,7 @@ export const STORY: StoryNode[] = [
     subtitle: "Computers become friendly",
     kid: "The Macintosh helped make computers feel simpler and more human.",
     deep: "The Macintosh launch pushed graphical user interfaces into the mainstream and made design a core part of personal computing products.",
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-    ],
+    sources: [SOURCES.britannicaJobs],
   },
 
   {
@@ -162,16 +196,7 @@ export const STORY: StoryNode[] = [
     subtitle: "Leaving Apple (a painful pivot)",
     kid: "Steve left Apple. It looked like a loss—until it became fuel for the next chapter.",
     deep: "Jobs left Apple in 1985, an event often described as a major setback that later became a catalyst for his next ventures.",
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-      {
-        label: "Stanford: 2005 Commencement prepared text",
-        url: "https://news.stanford.edu/stories/2005/06/steve-jobs-commencement-address-prepared-text",
-      },
-    ],
+    sources: [SOURCES.britannicaJobs, SOURCES.stanford2005],
   },
 
   {
@@ -182,24 +207,24 @@ export const STORY: StoryNode[] = [
     subtitle: "Building the future OS (quietly)",
     kid: "Steve started NeXT to build super-advanced computers and software.",
     deep: "NeXT built computers and an operating system lineage that later became foundational to Apple’s modern platforms after Apple acquired NeXT.",
-    image: {
-      url: "https://commons.wikimedia.org/wiki/File:NEXT_Cube-IMG_7157.jpg",
-      alt: "NeXTcube workstation (Musée Bolo, EPFL)",
-      credit: "Rama & Musée Bolo (CC BY-SA) via Wikimedia Commons",
-    },
+    image: image(
+      "https://commons.wikimedia.org/wiki/File:NEXT_Cube-IMG_7157.jpg",
+      "NeXTcube workstation (Musée Bolo, EPFL)",
+      "Rama & Musée Bolo (CC BY-SA) via Wikimedia Commons"
+    ),
     sources: [
-      {
-        label: "Wikipedia: NeXT (overview)",
-        url: "https://en.wikipedia.org/wiki/NeXT",
-      },
-      {
-        label: "Wikimedia Commons: NeXT cube image",
-        url: "https://commons.wikimedia.org/wiki/File:NEXT_Cube-IMG_7157.jpg",
-      },
-      {
-        label: "Apple acquires NeXT (historical overview)",
-        url: "https://en.wikipedia.org/wiki/NeXT#Acquisition_by_Apple",
-      },
+      source(
+        "Wikipedia: NeXT (overview)",
+        "https://en.wikipedia.org/wiki/NeXT"
+      ),
+      source(
+        "Wikimedia Commons: NeXT cube image",
+        "https://commons.wikimedia.org/wiki/File:NEXT_Cube-IMG_7157.jpg"
+      ),
+      source(
+        "Apple acquires NeXT (historical overview)",
+        "https://en.wikipedia.org/wiki/NeXT#Acquisition_by_Apple"
+      ),
     ],
   },
 
@@ -211,9 +236,7 @@ export const STORY: StoryNode[] = [
     subtitle: "Storytelling meets technology",
     kid: "Steve helped Pixar grow into a studio that made animated movies feel magical.",
     deep: "Jobs purchased The Graphics Group and it became Pixar—helping accelerate computer animation into a new era.",
-    sources: [
-      { label: "Pixar: The Story", url: "https://www.pixar.com/the-story" },
-    ],
+    sources: [source("Pixar: The Story", "https://www.pixar.com/the-story")],
   },
 
   {
@@ -225,14 +248,11 @@ export const STORY: StoryNode[] = [
     kid: "Apple brought Steve back. He helped focus the company again.",
     deep: "After Apple’s acquisition of NeXT, Jobs returned and soon led Apple through a major turnaround.",
     sources: [
-      {
-        label: "Apple acquires NeXT (overview)",
-        url: "https://en.wikipedia.org/wiki/Apple_Inc.#1997%E2%80%932007:_Return_to_profitability",
-      },
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
+      source(
+        "Apple acquires NeXT (overview)",
+        "https://en.wikipedia.org/wiki/Apple_Inc.#1997%E2%80%932007:_Return_to_profitability"
+      ),
+      SOURCES.britannicaJobs,
     ],
   },
 
@@ -244,12 +264,7 @@ export const STORY: StoryNode[] = [
     subtitle: "A colorful computer that people actually wanted",
     kid: "The iMac made computers feel fun and friendly—like a gadget from the future.",
     deep: "The iMac era marked a major shift in Apple’s product design direction and helped reignite mainstream interest in Apple.",
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-    ],
+    sources: [SOURCES.britannicaJobs],
   },
 
   {
@@ -260,12 +275,7 @@ export const STORY: StoryNode[] = [
     subtitle: "1,000 songs in your pocket",
     kid: "Your music could travel with you. That changed how people listened to songs forever.",
     deep: "Apple introduced iPod in 2001, a major milestone in Apple’s consumer electronics strategy.",
-    sources: [
-      {
-        label: "Apple Press Release: iPod",
-        url: "https://www.apple.com/newsroom/2001/10/23Apple-Introduces-iPod/",
-      },
-    ],
+    sources: [SOURCES.appleIpodPR],
   },
 
   {
@@ -276,20 +286,17 @@ export const STORY: StoryNode[] = [
     subtitle: "A phone that became a pocket computer",
     kid: "The iPhone wasn’t just a phone. It was a tiny computer you could carry everywhere.",
     deep: "Apple unveiled iPhone in 2007, merging phone, iPod, and internet communicator into one device.",
-    image: {
-      url: "https://commons.wikimedia.org/wiki/File:IPhone_First_Generation_8GB_(3677961514).jpg",
-      alt: "First generation iPhone",
-      credit: "Wikimedia Commons (see file page for license details)",
-    },
+    image: image(
+      "https://commons.wikimedia.org/wiki/File:IPhone_First_Generation_8GB_(3677961514).jpg",
+      "First generation iPhone",
+      "Wikimedia Commons (see file page for license details)"
+    ),
     sources: [
-      {
-        label: "Apple Press Release: iPhone",
-        url: "https://www.apple.com/newsroom/2007/01/09Apple-Reinvents-the-Phone-with-iPhone/",
-      },
-      {
-        label: "Wikimedia Commons: iPhone image",
-        url: "https://commons.wikimedia.org/wiki/File:IPhone_First_Generation_8GB_(3677961514).jpg",
-      },
+      SOURCES.appleIphonePR,
+      source(
+        "Wikimedia Commons: iPhone image",
+        "https://commons.wikimedia.org/wiki/File:IPhone_First_Generation_8GB_(3677961514).jpg"
+      ),
     ],
   },
 
@@ -301,12 +308,7 @@ export const STORY: StoryNode[] = [
     subtitle: "A new kind of computer",
     kid: "The iPad made computing feel like touching and moving ideas with your hands.",
     deep: "Apple introduced iPad in 2010, extending Apple’s approach to mobile computing into a larger format.",
-    sources: [
-      {
-        label: "Britannica: Steve Jobs",
-        url: "https://www.britannica.com/biography/Steve-Jobs",
-      },
-    ],
+    sources: [SOURCES.britannicaJobs],
   },
 
   {
@@ -317,12 +319,7 @@ export const STORY: StoryNode[] = [
     subtitle: "Resigning as CEO",
     kid: "Steve stepped down as CEO. He helped set Apple up for the future.",
     deep: "Jobs resigned as CEO in August 2011 and recommended Tim Cook as his successor.",
-    sources: [
-      {
-        label: "Apple Press Release: Resignation",
-        url: "https://www.apple.com/newsroom/2011/08/24Steve-Jobs-Resigns-as-CEO-of-Apple/",
-      },
-    ],
+    sources: [SOURCES.appleResignPR],
   },
 
   {
@@ -333,11 +330,6 @@ export const STORY: StoryNode[] = [
     subtitle: "Steve Jobs dies at age 56",
     kid: "Steve Jobs died in 2011. His ideas kept traveling—like light from a star.",
     deep: "Steve Jobs died October 5, 2011, at age 56. Apple published a statement recognizing his impact.",
-    sources: [
-      {
-        label: "Apple: Steve Jobs (1955–2011)",
-        url: "https://www.apple.com/newsroom/2011/10/05Steve-Jobs-1955-2011/",
-      },
-    ],
+    sources: [SOURCES.appleObit],
   },
 ];
