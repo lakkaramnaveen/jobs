@@ -1,15 +1,20 @@
 import { useState } from "react";
 import type { StoryNode } from "../data/story";
 
-export default function StoryPanel({ node }: { node: StoryNode }) {
+export default function StoryPanel({
+  open,
+  node,
+}: {
+  open: boolean;
+  node: StoryNode;
+}) {
   const [showImage, setShowImage] = useState(false);
 
-  // Reset image visibility when node changes
-  // (simple approach: key the component where it’s used, or do an effect)
-  // If you want it auto-reset, render <StoryPanel key={node.id} node={node} /> in parent.
-
   return (
-    <section className="panel" aria-label="Selected story details">
+    <section
+      className={`panel ${open ? "" : "isClosed"}`}
+      aria-label="Selected story details"
+    >
       <div className="panelTop">
         <div className="panelKicker">
           {node.dateLabel ? node.dateLabel : node.year}

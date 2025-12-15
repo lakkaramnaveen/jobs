@@ -2,13 +2,20 @@ import { useMemo } from "react";
 import type { StoryNode } from "../data/story";
 
 type Props = {
+  open: boolean;
   story: StoryNode[];
   selectedId: string;
   onSelect: (id: string) => void;
   query: string;
 };
 
-export default function HUD({ story, selectedId, onSelect, query }: Props) {
+export default function HUD({
+  open,
+  story,
+  selectedId,
+  onSelect,
+  query,
+}: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return story;
@@ -21,7 +28,10 @@ export default function HUD({ story, selectedId, onSelect, query }: Props) {
   }, [query, story]);
 
   return (
-    <aside className="hud" aria-label="Mission Control timeline navigation">
+    <aside
+      className={`hud ${open ? "" : "isClosed"}`}
+      aria-label="Mission Control timeline navigation"
+    >
       <div className="hudHeader">
         <div className="hudTitle">Mission Control</div>
         <div className="hudSub">Navigate Steve Jobs’ life as a star map</div>

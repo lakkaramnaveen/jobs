@@ -1,7 +1,10 @@
+// src/components/StarMap.tsx
 import { OrbitControls, Sparkles } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import type { MutableRefObject } from "react";
 import * as THREE from "three";
+
 import type { StoryNode } from "../data/story";
 import BackgroundStarsPoints from "./background/BackgroundStarsPoints";
 import StarNode from "./StarNode";
@@ -13,15 +16,23 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 type Props = {
   story: StoryNode[];
   selectedId: string;
+
+  // Clicking a star should jump (warp) to that node
   onSelect: (id: string) => void;
-  onUserControlStart?: () => void; // NEW
+
+  // Called when the user starts manual control (drag/zoom)
+  onUserControlStart?: () => void;
+
+  // Exposes OrbitControls to parent (for global zoom buttons / shortcuts)
+  controlsRefExternal?: MutableRefObject<OrbitControlsImpl | null>;
 };
 
 // ---------- Layout helpers (less rigid) ----------
 function hashToUnit(str: string) {
   let h = 2166136261;
-  for (let i = 0; i < str.length; i++)
+  for (let i = 0; i < str.length; i++) {
     h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
   // 0..1
   return (h >>> 0) / 4294967295;
 }
@@ -36,10 +47,11 @@ function makePositions(story: StoryNode[]) {
     const t = i * 0.62;
     const r = radiusBase + i * spiralStep;
 
+    // Small spacing bumps for big chapters
     const chapterBoost =
       node.id === "exit-apple" || node.id === "return" ? 2.0 : 0;
 
-    // Organic jitter (deterministic)
+    // Organic jitter (deterministic per id)
     const seed = hashToUnit(node.id);
     const jx = (seed - 0.5) * 0.8;
     const jy = (hashToUnit(node.id + "y") - 0.5) * 0.6;
@@ -52,6 +64,7 @@ function makePositions(story: StoryNode[]) {
     pts[node.id] = new THREE.Vector3(x, y, z);
   });
 
+  // Make sure birth is exactly center
   pts["birth"] = new THREE.Vector3(0, 0, 0);
   return pts;
 }
@@ -62,7 +75,7 @@ function easeInOutCubic(t: number) {
 }
 
 type FocusAnim = {
-  start: number;
+  start: number; // clock seconds
   duration: number;
   fromPos: THREE.Vector3;
   toPos: THREE.Vector3;
@@ -70,8 +83,14 @@ type FocusAnim = {
   toTarget: THREE.Vector3;
 };
 
-export default function StarMap({ story, selectedId, onSelect }: Props) {
-  const { camera, pointer } = useThree();
+export default function StarMap({
+  story,
+  selectedId,
+  onSelect,
+  onUserControlStart,
+  controlsRefExternal,
+}: Props) {
+  const { camera, pointer, clock } = useThree();
 
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const focusRef = useRef<FocusAnim | null>(null);
@@ -83,7 +102,10 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
 
   // Smooth constellation curve (less rigid than straight segments)
   const curvePoints = useMemo(() => {
-    const base = story.map((n) => positions[n.id]).filter(Boolean);
+    const base = story
+      .map((n) => positions[n.id])
+      .filter((v): v is THREE.Vector3 => Boolean(v));
+
     const curve = new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
     return curve.getPoints(240);
   }, [story, positions]);
@@ -95,19 +117,19 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
   // Comet that travels along the constellation path (playful!)
   const cometRef = useRef<THREE.Group>(null);
   const cometCurve = useMemo(() => {
-    const base = story.map((n) => positions[n.id]).filter(Boolean);
+    const base = story
+      .map((n) => positions[n.id])
+      .filter((v): v is THREE.Vector3 => Boolean(v));
+
     return new THREE.CatmullRomCurve3(base, false, "catmullrom", 0.45);
   }, [story, positions]);
 
+  // Pause Movie Mode (or any autoplay) when user starts controlling camera
   useEffect(() => {
     const controls = controlsRef.current;
-    if (!controls) return;
+    if (!controls || !onUserControlStart) return;
 
-    const handleStart = () => {
-      onUserControlStart?.();
-    };
-
-    // OrbitControls fires "start" on drag and (typically) on wheel zoom
+    const handleStart = () => onUserControlStart();
     controls.addEventListener("start", handleStart);
 
     return () => {
@@ -120,11 +142,11 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    const now = performance.now() / 1000;
+    // Use the same clock as useFrame to keep timing consistent
+    const start = clock.getElapsedTime();
 
     const fromTarget = controls.target.clone();
     const fromPos = camera.position.clone();
-
     const toTarget = selectedPos.clone();
 
     // Keep current viewing direction & distance for continuity
@@ -141,14 +163,14 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     const toPos = toTarget.clone().add(dir.multiplyScalar(currentDist));
 
     focusRef.current = {
-      start: now,
+      start,
       duration: 0.55,
       fromPos,
       toPos,
       fromTarget,
       toTarget,
     };
-  }, [camera.position, selectedId, selectedPos]);
+  }, [selectedId, selectedPos, camera, clock]);
 
   const onHover = useCallback((id: string | null) => setHovered(id), []);
 
@@ -156,7 +178,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // Small “space drift” based on cursor, without breaking controls.
+    // Small “space drift” based on cursor, without breaking controls
     const driftX = pointer.x * 0.25;
     const driftY = pointer.y * 0.18;
 
@@ -173,7 +195,6 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
       if (t >= 1) focusRef.current = null;
     } else {
       // If not animating, gently keep target centered on selected star
-      // (damp is efficient and looks better than raw lerp)
       controls.target.x = THREE.MathUtils.damp(
         controls.target.x,
         selectedPos.x + driftX,
@@ -199,8 +220,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
     // Move comet along curve
     if (cometRef.current) {
       const u = (now * 0.06) % 1;
-      const p = cometCurve.getPointAt(u);
-      cometRef.current.position.copy(p);
+      cometRef.current.position.copy(cometCurve.getPointAt(u));
     }
   });
 
@@ -211,7 +231,15 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
 
       {/* Zoom / rotate controls */}
       <OrbitControls
-        ref={controlsRef as any}
+        ref={(c) => {
+          // Internal ref (StarMap)
+          controlsRef.current = c as unknown as OrbitControlsImpl;
+
+          // External ref (SpaceScene uses it for global zoom buttons/shortcuts)
+          if (controlsRefExternal) {
+            controlsRefExternal.current = c as unknown as OrbitControlsImpl;
+          }
+        }}
         enableDamping
         dampingFactor={0.08}
         enableZoom
@@ -222,6 +250,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
         zoomSpeed={0.8}
       />
 
+      {/* Fast points-based starfield */}
       <BackgroundStarsPoints count={4500} radius={130} />
 
       {/* Constellation curve (base line) */}
@@ -234,7 +263,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
         <lineBasicMaterial color="#9ad7ff" transparent opacity={0.08} />
       </line>
 
-      {/* A subtle sparkle field around the constellation region */}
+      {/* Sparkle field around the constellation region */}
       <Sparkles
         count={140}
         scale={[12, 6, 18]}
@@ -258,6 +287,7 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
         />
       </group>
 
+      {/* Stars */}
       {story.map((node) => {
         const pos = positions[node.id];
         const isSelected = node.id === selectedId;
@@ -288,7 +318,4 @@ export default function StarMap({ story, selectedId, onSelect }: Props) {
       })}
     </group>
   );
-}
-function onUserControlStart() {
-  throw new Error("Function not implemented.");
 }

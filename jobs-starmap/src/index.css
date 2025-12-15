@@ -451,3 +451,141 @@ body,
     width: min(320px, calc(100vw - 24px));
   }
 }
+
+.hud,
+.panel {
+  transition: transform 220ms ease, opacity 220ms ease;
+  will-change: transform, opacity;
+}
+
+/* Off-canvas behavior */
+.hud.isClosed {
+  transform: translateX(calc(-100% - 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.panel.isClosed {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chromeBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 40;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(10, 12, 22, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.iconBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:hover {
+  border-color: rgba(124, 199, 255, 0.35);
+}
+
+.iconBtn.active {
+  border-color: rgba(124, 199, 255, 0.6);
+  background: rgba(40, 60, 120, 0.18);
+}
+
+/* Hamburger icon (3 lines) */
+.hamburger {
+  position: relative;
+  width: 18px;
+  height: 12px;
+}
+
+.hamburger::before,
+.hamburger::after,
+.hamburger {
+  content: "";
+  display: block;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  height: 2px;
+}
+
+.hamburger {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.hamburger::before {
+  position: absolute;
+  left: 0;
+  top: -5px;
+  width: 18px;
+}
+
+.hamburger::after {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 18px;
+}
+
+.infoDot {
+  font-weight: 900;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 199, 255, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Zoom group */
+.zoomGroup {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: 2px;
+}
+@media (max-width: 1100px) {
+  .movieDock {
+    bottom: 110px;
+  }
+}
+
+@media (max-width: 640px) {
+  .chromeBar {
+    top: 12px;
+    left: 12px;
+  }
+
+  .hud {
+    left: 12px;
+    top: 64px; /* below chromeBar */
+    width: calc(100vw - 24px);
+    max-height: 34vh;
+  }
+
+  .panel {
+    right: 12px;
+    left: 12px;
+    width: calc(100vw - 24px);
+    top: auto;
+    bottom: 92px;
+    max-height: 44vh;
+  }
+}
