@@ -82,7 +82,7 @@ export const STORY: StoryNode[] = [
     id: "birth",
     year: 1955,
     dateLabel: "Feb 24, 1955",
-    title: "A Star Is Born",
+    title: "A star is born",
     subtitle: "San Francisco → adopted and raised in Silicon Valley",
     kid: "Steve Jobs was born in San Francisco and was adopted as a baby. He grew up in California, right where computers were starting to boom.",
     deep: "Steve Jobs was born February 24, 1955, in San Francisco. He was adopted and raised in the Bay Area, which later became the heart of Silicon Valley.",
